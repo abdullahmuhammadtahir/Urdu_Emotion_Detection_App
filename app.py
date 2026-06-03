@@ -1,12 +1,13 @@
-# your streamlit code here
 import streamlit as st
 import torch
 import numpy as np
 from transformers import XLMRobertaForSequenceClassification, XLMRobertaTokenizer
 import pickle
+import pandas as pd
+import matplotlib.pyplot as plt
 
 # =========================
-# ✅ LOAD MODEL
+# ✅ LOAD MODEL (CACHED)
 # =========================
 @st.cache_resource
 def load_model():
@@ -14,25 +15,33 @@ def load_model():
     model_path = "abd12-tahir/urdu-emotion-model"
 
     tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
-    model = XLMRobertaForSequenceClassification.from_pretrained(
-        model_path
-    )
+    model = XLMRobertaForSequenceClassification.from_pretrained(model_path)
 
-    device = "cpu"   # ✅ FIX: force CPU
+    device = "cpu"
     model.to(device)
     model.eval()
 
     return tokenizer, model, device
 
-
 tokenizer, model, device = load_model()
-
 
 # =========================
 # ✅ LOAD LABEL ENCODER
 # =========================
 with open("label_encoder.pkl", "rb") as f:
     le = pickle.load(f)
+
+# =========================
+# ✅ EMOJI MAPPING
+# =========================
+emotion_emoji = {
+    "happy": "😊",
+    "sad": "😢",
+    "fear": "😨",
+    "anger": "😠",
+    "love": "❤️",
+    "neutral": "😐"
+}
 
 # =========================
 # ✅ SINGLE SENTENCE FUNCTION
@@ -62,9 +71,12 @@ def predict_final(text):
             if second:
                 return predict_final(second)
 
-    # ✅ NEGATION
+    # ✅ NEGATION (FINAL FIXED ✅)
     if "نہیں" in text:
-        if any(p in text for p in ["نہیں ہوں", "نہیں ہے", "نہیں لگ"]):
+        if any(p in text for p in [
+            "نہیں ہوں", "نہیں ہے", "نہیں لگ",
+            "نہیں کرتا", "نہیں کرتی"
+        ]):
             if pred in ["happy", "love"]:
                 pred = "sad"
             elif pred in ["sad", "fear", "anger"]:
@@ -125,10 +137,8 @@ st.set_page_config(page_title="Emotion Detection", layout="centered")
 st.title("🧠 Urdu Emotion Detection (XLM-R + Hybrid)")
 st.write("Enter Urdu text (single sentence or paragraph)")
 
-# ✅ Input box
 user_input = st.text_area("Enter text here:", height=150)
 
-# ✅ Button
 if st.button("Predict Emotion"):
 
     if user_input.strip() == "":
@@ -138,17 +148,40 @@ if st.button("Predict Emotion"):
 
         st.subheader("✅ Prediction Result")
 
-        # 🔹 Sentence case
+        # ✅ SENTENCE
         if mode == "sentence":
-            st.success(f"Emotion: {result['emotion']}")
+            emoji = emotion_emoji.get(result["emotion"], "")
+            st.success(f"{emoji} Emotion: {result['emotion']}")
             st.write(f"Confidence: {result['confidence']}")
 
-        # 🔹 Paragraph case
+        # ✅ PARAGRAPH
         else:
-            st.success(f"Final Emotion: {result['emotion']}")
+            emoji = emotion_emoji.get(result["emotion"], "")
+            st.success(f"{emoji} Final Emotion: {result['emotion']}")
 
             st.write("### Sentence-wise Breakdown:")
+
+            emotions_list = []
+
             for r in result["details"]:
+                emoji = emotion_emoji.get(r["emotion"], "")
+                emotions_list.append(r["emotion"])
+
                 st.write(f"👉 {r['text']}")
-                st.write(f"Emotion: {r['emotion']} | Confidence: {r['confidence']}")
+                st.write(f"{emoji} Emotion: {r['emotion']} | Confidence: {r['confidence']}")
                 st.write("---")
+
+            # ✅ BAR CHART
+            df = pd.DataFrame(emotions_list, columns=["Emotion"])
+            chart_data = df["Emotion"].value_counts()
+
+            st.write("### 📊 Emotion Distribution")
+            st.bar_chart(chart_data)
+
+            # ✅ PIE CHART
+            fig, ax = plt.subplots()
+            chart_data.plot.pie(ax=ax, autopct='%1.1f%%')
+            ax.set_ylabel("")
+
+            st.write("### 🎯 Emotion Pie Chart")
+            st.pyplot(fig)
