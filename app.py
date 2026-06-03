@@ -8,19 +8,24 @@ import pickle
 # =========================
 # ✅ LOAD MODEL
 # =========================
-model_path = "abd12-tahir/urdu-emotion-model"
- 
+@st.cache_resource
+def load_model():
 
-tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
-model = XLMRobertaForSequenceClassification.from_pretrained(
-    model_path,
-    use_safetensors=True
-)
+    model_path = "abd12-tahir/urdu-emotion-model"
 
-# ✅ device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-model.eval()
+    tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
+    model = XLMRobertaForSequenceClassification.from_pretrained(model_path)
+
+    device = torch.device("cpu")  # ✅ FORCE CPU (important for Streamlit)
+
+    model.to(device)
+    model.eval()
+
+    return tokenizer, model, device
+
+
+tokenizer, model, device = load_model()
+
 
 # =========================
 # ✅ LOAD LABEL ENCODER
