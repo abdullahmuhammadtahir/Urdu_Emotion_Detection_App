@@ -8,7 +8,8 @@ import pickle
 # =========================
 # ✅ LOAD MODEL
 # =========================
-model_path = "xlm_model"   # change if needed
+model_path = "abd12-tahir/urdu-emotion-model"
+ 
 
 tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
 model = XLMRobertaForSequenceClassification.from_pretrained(
