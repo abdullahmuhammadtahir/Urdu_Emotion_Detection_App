@@ -14,10 +14,11 @@ def load_model():
     model_path = "abd12-tahir/urdu-emotion-model"
 
     tokenizer = XLMRobertaTokenizer.from_pretrained(model_path)
-    model = XLMRobertaForSequenceClassification.from_pretrained(model_path)
+    model = XLMRobertaForSequenceClassification.from_pretrained(
+        model_path
+    )
 
-    device = torch.device("cpu")  # ✅ FORCE CPU (important for Streamlit)
-
+    device = "cpu"   # ✅ FIX: force CPU
     model.to(device)
     model.eval()
 
